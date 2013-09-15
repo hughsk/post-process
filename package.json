@@ -1,0 +1,40 @@
+{
+  "name": "post-process",
+  "version": "0.0.0",
+  "description": "[![post-process](https://nodei.co/npm/post-process.png?mini=true)](https://nodei.co/npm/post-process)",
+  "main": "index.js",
+  "dependencies": {
+    "gl-buffer": "~0.1.1",
+    "gl-texture2d": "~0.1.4",
+    "gl-shader": "~0.0.6",
+    "gl-vao": "~0.0.2"
+  },
+  "devDependencies": {
+    "gl-now": "~0.0.4",
+    "brfs": "~0.0.7",
+    "rtc-media": "~0.2.5"
+  },
+  "scripts": {
+    "start": "beefy demo.js:bundle.js -- -t brfs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/hughsk/post-process.git"
+  },
+  "author": "Hugh Kennedy <hughskennedy@gmail.com> (http://hughskennedy.com/)",
+  "license": "MIT",
+  "readmeFilename": "README.md",
+  "keywords": [
+    "shader",
+    "glsl",
+    "post",
+    "processing",
+    "visual",
+    "graphics",
+    "fast",
+    "canvas",
+    "video",
+    "transform",
+    "gpu"
+  ]
+}
