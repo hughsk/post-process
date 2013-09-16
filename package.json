@@ -1,6 +1,6 @@
 {
   "name": "post-process",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "A generic GLSL post-processing module for applying super-speedy GPU effects to images, videos and canvas elements",
   "main": "index.js",
   "dependencies": {
