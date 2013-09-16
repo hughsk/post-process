@@ -15,7 +15,8 @@
     "rtc-media": "~0.2.5"
   },
   "scripts": {
-    "start": "beefy demo.js:bundle.js -- -t brfs"
+    "start": "beefy demo.js:bundle.js -- -t brfs",
+    "bundle": "browserify demo.js -t brfs > bundle.js"
   },
   "repository": {
     "type": "git",
