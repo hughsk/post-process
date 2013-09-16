@@ -1,7 +1,7 @@
 {
   "name": "post-process",
-  "version": "0.0.0",
-  "description": "[![post-process](https://nodei.co/npm/post-process.png?mini=true)](https://nodei.co/npm/post-process)",
+  "version": "0.0.1",
+  "description": "A generic GLSL post-processing module for applying super-speedy GPU effects to images, videos and canvas elements",
   "main": "index.js",
   "dependencies": {
     "gl-buffer": "~0.1.1",

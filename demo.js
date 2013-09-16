@@ -5,11 +5,12 @@ var pp  = require('./')
 var fs  = require('fs')
 var mousex = 0
 var mousey = 0
+var mediaOpts = { constraints: { audio: false, video: true } }
 var post
 
 // Load up the video stream using
 // getUserMedia
-require('rtc-media')().render([video], function() {
+require('rtc-media')(mediaOpts).render([video], function() {
   var shell = now({ clearColor: [0, 0, 0, 1] })
     .on('gl-init', init)
     .on('gl-render', render)
