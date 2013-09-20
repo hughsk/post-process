@@ -12,7 +12,7 @@
   "devDependencies": {
     "gl-now": "~0.0.4",
     "brfs": "~0.0.7",
-    "rtc-media": "~0.2.5"
+    "rtc-media": "~1.0.0"
   },
   "scripts": {
     "start": "beefy demo.js:bundle.js -- -t brfs",
