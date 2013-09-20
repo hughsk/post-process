@@ -11,7 +11,7 @@ var post
 
 // Load up the video stream using
 // getUserMedia
-require('rtc-media')(mediaOpts).render([video], function() {
+require('rtc-media')(mediaOpts).render(video, function() {
   var shell = now({ clearColor: [0, 0, 0, 1] })
     .on('gl-init', init)
     .on('gl-render', render)
@@ -11194,16 +11194,35 @@ module.exports = createVAO
   to use the first style as it's quite safe (thanks to some checks in the
   code).
 
-  ### Media Events
+  ### Events
 
-  If you want to know when media is captured (and you probably do), then
-  you can tap into the `capture` event of the created media object:
+  Once a media object has been created, it will provide a number of events
+  through the standard node EventEmitter API.
+
+  #### `capture`
+
+  The `capture` event is triggered once the requested media stream has
+  been captured by the browser.
 
   ```js
   media().once('capture', function(stream) {
     // stream references underlying media stream that was captured
   });
   ```
+
+  #### `render`
+
+  The `render` event is triggered once the stream has been rendered
+  to the any supplied (or created) video elements.
+
+  While it might seem a little confusing that when the `render` event
+  fires that it returns an array of elements rather than a single element
+  (which is what is provided when calling the `render` method).
+
+  This occurs because it is completely valid to render a single captured
+  media stream to multiple media elements on a page.  The `render` event
+  is reporting once the render operation has completed for all targets that
+  have been registered with the capture stream.
 
   ## Reference
 
@@ -11213,7 +11232,6 @@ module.exports = createVAO
 
 var debug = require('cog/logger')('media');
 var extend = require('cog/extend');
-var qsa = require('cog/qsa');
 var detect = require('rtc-core/detect');
 var EventEmitter = require('events').EventEmitter;
 var util = require('util');
@@ -11228,7 +11246,11 @@ window.URL = window.URL || detect('URL');
 window.MediaStream = detect('MediaStream');
 
 /**
-  ### media(opts?)
+  ### media
+
+  ```
+  media(opts?)
+  ```
 
   Capture media using the underlying
   [getUserMedia](http://www.w3.org/TR/mediacapture-streams/) API.
@@ -11264,7 +11286,7 @@ window.MediaStream = detect('MediaStream');
         audio: true
       }
     ```
-
+  
 **/
 function Media(opts) {
   if (! (this instanceof Media)) {
@@ -11280,6 +11302,14 @@ function Media(opts) {
       stream: opts,
       capture: false,
       muted: false
+    };
+  }
+
+  // if we've been passed opts and they look like constraints, move things
+  // around a little
+  if (opts && (opts.audio || opts.video)) {
+    opts = {
+      constraints: opts
     };
   }
 
@@ -11323,7 +11353,11 @@ util.inherits(Media, EventEmitter);
 module.exports = Media;
 
 /**
-  ### capture(constraints, callback)
+  ### capture
+
+  ```
+  capture(constraints, callback)
+  ```
 
   Capture media.  If constraints are provided, then they will 
   override the default constraints that were used when the media object was 
@@ -11369,18 +11403,20 @@ Media.prototype.capture = function(constraints, callback) {
 };
 
 /**
-  ### render(targets, opts?, callback?)
+  ### render
 
-  Render this media element to elements matching the specified selector or
-  specific targets.  If the targets are regular DOM elements rather than 
-  `video` or `audio` elements, then new `video` or `audio` elements are 
-  created to accept the media stream once started.
+  ```js
+  render(target, opts?, callback?)
+  ```
 
-  In all cases, an array of video/audio elements (either created or 
-  existing) from the render call and can be manipulated as required by 
-  your application.  It is important to note, however, that the elements
-  may not yet have streams associated with them due to the async nature
-  of the underlying `getUserMedia` API (requesting permission, etc).
+  Render the captured media to the specified target element.  While previous
+  versions of rtc-media accepted a selector string or an array of elements
+  this has been dropped in favour of __one single target element__.
+
+  If the target element is a valid MediaElement then it will become the
+  target of the captured media stream.  If, however, it is a generic DOM
+  element it will a new Media element will be created that using the target
+  as it's parent.
 
   A simple example of requesting default media capture and rendering to the 
   document body is shown below:
@@ -11403,8 +11439,13 @@ Media.prototype.capture = function(constraints, callback) {
   ```
 
 **/
-Media.prototype.render = function(targets, opts, callback) {
-  var elements;
+Media.prototype.render = function(target, opts, callback) {
+  // if the target is an array, extract the first element
+  if (Array.isArray(target)) {
+    // log a warning
+    console.log('WARNING: rtc-media render (as of 1.x) expects a single target');
+    target = target[0];
+  }
 
   if (typeof opts == 'function') {
     callback = opts;
@@ -11414,21 +11455,8 @@ Media.prototype.render = function(targets, opts, callback) {
   // ensure we have opts
   opts = opts || {};
 
-  // TODO: free existing elements
-
-  // use qsa to get the targets
-  if (typeof targets == 'string' || (targets instanceof String)) {
-    targets = qsa(targets);
-  }
-  // otherwise, make sure we have an array
-  else {
-    targets = [].concat(targets || []);
-  }
-
   // create the video / audio elements
-  elements = targets
-    .filter(Boolean)
-    .map(this._prepareElements.bind(this, opts));
+  target = this._prepareElement(opts, target);
 
   // if no stream was specified, wait for the stream to initialize
   if (! this.stream) {
@@ -11444,13 +11472,7 @@ Media.prototype.render = function(targets, opts, callback) {
     this.once('render', callback);
   }
 
-  // return the video / audio elements
-  return elements;
-};
-
-Media.prototype.start = function() {
-  console.log('start method has been deprecated, please use capture instead');
-  this.capture.apply(this, arguments);
+  return target;
 };
 
 /**
@@ -11499,12 +11521,12 @@ Media.prototype.stop = function(opts) {
 **/
 
 /**
-  ### _prepareElements(opts, element)
+  ### _prepareElement(opts, element)
 
-  The prepareElements function is used to prepare DOM elements that will
+  The prepareElement function is used to prepare DOM elements that will
   receive the media streams once the stream have been successfully captured.
 **/
-Media.prototype._prepareElements = function(opts, element) {
+Media.prototype._prepareElement = function(opts, element) {
   var parent;
   var validElement = (element instanceof HTMLVideoElement) ||
         (element instanceof HTMLAudioElement);
@@ -11684,19 +11706,23 @@ Media.prototype._handleFail = function() {
   // TODO: make this more friendly
   this.emit('error', new Error('Unable to capture requested media'));
 };
-},{"cog/extend":70,"cog/logger":71,"cog/qsa":72,"events":3,"rtc-core/detect":73,"util":6}],70:[function(require,module,exports){
+},{"cog/extend":70,"cog/logger":71,"events":3,"rtc-core/detect":72,"util":6}],70:[function(require,module,exports){
 /* jshint node: true */
 'use strict';
 
 /** 
-## extend(target, *)
+## cog/extend
+
+```js
+var extend = require('cog/extend');
+```
+
+### extend(target, *)
 
 Shallow copy object properties from the supplied source objects (*) into 
 the target object, returning the target object once completed:
 
 ```js
-var extend = require('cog/extend');
-
 extend({ a: 1, b: 2 }, { c: 3 }, { d: 4 }, { b: 5 }));
 ```
 
@@ -11722,6 +11748,10 @@ module.exports = function(target) {
 /**
   ## cog/logger
 
+  ```js
+  var logger = require('cog/logger');
+  ```
+
   Simple browser logging offering similar functionality to the
   [debug](https://github.com/visionmedia/debug) module.  
 
@@ -11730,7 +11760,6 @@ module.exports = function(target) {
   Create your self a new logging instance and give it a name:
 
   ```js
-  var logger = require('cog/logger');
   var debug = logger('phil');
   ```
 
@@ -11754,7 +11783,7 @@ module.exports = function(target) {
   // --> phil: Oh this is some much nicer :)
   ```
 
-  ### logger reference
+  ### Reference
 **/
 
 var active = [];
@@ -11848,46 +11877,6 @@ logger.enable = function() {
   return logger;
 };
 },{}],72:[function(require,module,exports){
-/* jshint node: true */
-/* global document: false */
-'use strict';
-
-var classSelectorRE = /^\.([\w\-]+)$/;
-var idSelectorRE = /^#([\w\-]+)$/;
-var tagSelectorRE = /^[\w\-]+$/;
-
-/**
-## qsa(selector, element)
-
-This function is used to get the results of the querySelectorAll output 
-in the fastest possible way.  This code is very much based on the
-implementation in
-[zepto](https://github.com/madrobby/zepto/blob/master/src/zepto.js#L104),
-but perhaps not quite as terse.
-**/
-module.exports = function(selector, scope) {
-  var idSearch;
-
-  // default the element to the document
-  scope = scope || document;
-
-  // determine whether we are doing an id search or not
-  idSearch = scope === document && idSelectorRE.test(selector);
-
-  // perform the search
-  return idSearch ?
-    // we are doing an id search, return the element search in an array
-    [scope.getElementById(RegExp.$1)] :
-    // not an id search, call the appropriate selector
-    Array.prototype.slice.call(
-        classSelectorRE.test(selector) ?
-          scope.getElementsByClassName(RegExp.$1) :
-            tagSelectorRE.test(selector) ?
-              scope.getElementsByTagName(selector) :
-              scope.querySelectorAll(selector)
-    );
-};
-},{}],73:[function(require,module,exports){
 /* jshint node: true */
 /* global window: false */
 /* global navigator: false */
