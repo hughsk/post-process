@@ -1,6 +1,8 @@
-# post-process [![experimental](http://hughsk.github.io/stability-badges/dist/experimental.svg)](http://github.com/hughsk/stability-badges) #
+# post-process [![deprecated](http://hughsk.github.io/stability-badges/dist/deprecated.svg)](http://github.com/hughsk/stability-badges) #
 
 [![post-process](https://nodei.co/npm/post-process.png?mini=true)](https://nodei.co/npm/post-process)
+
+**Deprecated: you may find this useful as a reference, but it's otherwise more worthwhile writing your own implementation :)**
 
 A generic GLSL post-processing module for applying super-speedy GPU effects to
 any `<img>`, `<canvas>` or `<video>` element. If you're already working with a
